@@ -65,7 +65,9 @@ class ToolsConfig:
 
         # 4: fall back to the default config bundled with the package so that
         # installed deployments (e.g. ``pipx run``) work without extra setup.
-        bundled = importlib.resources.files("ads_mcp").joinpath(DEFAULT_CONFIG_FILE)
+        bundled = importlib.resources.files("ads_mcp").joinpath(
+            DEFAULT_CONFIG_FILE
+        )
         if bundled.is_file():
             logger.info(
                 "No local '%s' found; using the bundled default configuration.",
