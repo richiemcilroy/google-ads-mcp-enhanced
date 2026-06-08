@@ -17,10 +17,30 @@ to provide several
 - `get_resource_metadata`: Retrieves metadata about a Google Ads API resource type, for example "campaign". This is useful to understand the structure of the data and what fields are available for querying.
 - `list_accessible_customers`: Returns ids of customers directly accessible
   by the user authenticating the call.
+- `planning_generate_keyword_ideas`: Generates keyword ideas with search
+  volume, competition, and bid estimate metrics.
+- `planning_get_keyword_historical_metrics`: Returns historical metrics for
+  an explicit keyword list.
+- `planning_forecast_keyword_plan`: Forecasts a proposed keyword plan using
+  budget, bid, geo, language, and match-type inputs.
+- `reports_search_terms_report`: Returns search terms with cost, clicks,
+  conversions, and conversion value.
+- `reports_negative_keyword_recommendations`: Suggests exact-match negatives
+  from costly low-conversion search terms.
+- `reports_change_history`: Retrieves recent account changes.
+- `reports_ad_policy_and_strength_report`: Retrieves ad policy summary, ad
+  status, ad strength, and action items.
+- `reports_budget_pacing_report`: Retrieves budget and spend metrics for
+  pacing checks.
+- `recommendations_generate_recommendations`: Retrieves generated Google Ads
+  recommendations for advisory review.
+- `conversions_upload_click_conversions`: Uploads offline click conversions
+  with `gclid`, `gbraid`, or `wbraid`. Disabled unless explicitly enabled.
 - Mutation tools are available under the `mutations` namespace when explicitly
   enabled. They can create budgets, paused Search campaigns, ad groups,
-  keywords, responsive search ads, campaign negative keywords, and update
-  campaign/ad group status or campaign budget amount.
+  keywords, responsive search ads, campaign negative keywords, update
+  campaign/ad group/ad status, update responsive search ad copy, and update
+  campaign budget amount.
 
 ### Mutation guardrails
 
@@ -28,13 +48,17 @@ Mutation tools are disabled in the bundled `tools_config.yaml` and every tool
 defaults to `validate_only=true`, which asks Google Ads to validate the request
 without applying it.
 
-To expose mutation tools, use a custom tools config:
+To expose mutation and conversion upload tools, use a custom tools config:
 
 ```yaml
 namespaces:
   customers: true
   search: true
   metadata: true
+  planning: true
+  reports: true
+  recommendations: true
+  conversions: true
   mutations: true
 ```
 
@@ -45,6 +69,18 @@ environment must also include:
 GOOGLE_ADS_MCP_ENABLE_MUTATIONS=true
 ```
 
+Optional guardrails:
+
+```shell
+GOOGLE_ADS_MCP_ALLOW_ENABLE=true
+GOOGLE_ADS_MCP_MAX_DAILY_BUDGET_MICROS=50000000
+GOOGLE_ADS_MCP_MAX_CPC_BID_MICROS=5000000
+```
+
+`GOOGLE_ADS_MCP_ALLOW_ENABLE=true` is required for real `ENABLED` status
+changes. The max budget and max CPC variables block oversized budget or bid
+mutations before the server calls Google Ads.
+
 Keep real writes behind human review in your MCP client. A recommended workflow
 is to call mutation tools with `validate_only=true`, inspect the result and
 planned operation, then call the same tool with `validate_only=false` only after
@@ -54,7 +90,10 @@ approval.
 
 The Google Ads MCP server uses the `tools_config.yaml` to let you selectively enable or disable individual tools or tool categories (namespaces) and customize their namespace prefixes.
 
-A default `tools_config.yaml` with all tools enabled is bundled with the package, so the server works out of the box with no extra setup. To customize your installation, the server resolves the configuration in the following order:
+A default `tools_config.yaml` with read-only tools enabled and write-capable
+tools disabled is bundled with the package, so the server works out of the box
+with no extra setup. To customize your installation, the server resolves the
+configuration in the following order:
 
 1. An explicit path set via the `GOOGLE_ADS_MCP_TOOLS_CONFIG` environment variable.
 2. A `tools_config.yaml` file in the current working directory.

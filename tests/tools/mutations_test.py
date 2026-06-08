@@ -88,3 +88,32 @@ class TestMutationTools(unittest.TestCase):
                 campaign_id="456",
                 keywords=["", "  "],
             )
+
+    @patch.dict(
+        "os.environ",
+        {"GOOGLE_ADS_MCP_MAX_DAILY_BUDGET_MICROS": "1000"},
+        clear=True,
+    )
+    def test_budget_cap_blocks_oversized_budget_before_credentials(self):
+        """Budget caps fail locally before Google Ads credentials are needed."""
+        with self.assertRaises(ToolError):
+            mutations.create_campaign_budget(
+                customer_id="1234567890",
+                name="Too high",
+                amount_micros=1001,
+            )
+
+    @patch.dict(
+        "os.environ",
+        {"GOOGLE_ADS_MCP_ENABLE_MUTATIONS": "true"},
+        clear=True,
+    )
+    def test_real_enable_requires_enable_flag(self):
+        """Real enable operations require an extra launch approval flag."""
+        with self.assertRaises(ToolError):
+            mutations.set_campaign_status(
+                customer_id="1234567890",
+                campaign_id="456",
+                status="ENABLED",
+                validate_only=False,
+            )

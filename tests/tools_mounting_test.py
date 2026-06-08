@@ -34,6 +34,10 @@ class TestToolsMounting(unittest.IsolatedAsyncioTestCase):
                     "customers": True,
                     "search": True,
                     "metadata": True,
+                    "planning": True,
+                    "reports": True,
+                    "recommendations": True,
+                    "conversions": False,
                     "mutations": False,
                 }
             }
@@ -49,6 +53,10 @@ class TestToolsMounting(unittest.IsolatedAsyncioTestCase):
         self.assertIn("customers_list_accessible_customers", tool_names)
         self.assertIn("search_search", tool_names)
         self.assertIn("metadata_get_resource_metadata", tool_names)
+        self.assertIn("planning_generate_keyword_ideas", tool_names)
+        self.assertIn("reports_search_terms_report", tool_names)
+        self.assertIn("recommendations_generate_recommendations", tool_names)
+        self.assertNotIn("conversions_upload_click_conversions", tool_names)
         self.assertNotIn("mutations_set_campaign_status", tool_names)
 
     @patch("ads_mcp.config.ToolsConfig.load")
@@ -77,6 +85,28 @@ class TestToolsMounting(unittest.IsolatedAsyncioTestCase):
         self.assertIn("mutations_set_ad_group_status", tool_names)
         self.assertIn("mutations_set_campaign_budget_amount", tool_names)
         self.assertIn("mutations_add_campaign_negative_keywords", tool_names)
+        self.assertIn("mutations_set_ad_group_ad_status", tool_names)
+        self.assertIn("mutations_update_responsive_search_ad", tool_names)
+        self.assertIn("mutations_get_mutation_guardrails", tool_names)
+
+    @patch("ads_mcp.config.ToolsConfig.load")
+    async def test_mounting_explicit_conversions_namespace(self, mock_load):
+        """Tests that conversion upload tools mount only when explicitly enabled."""
+        mock_load.return_value = ToolsConfig(
+            {
+                "namespaces": {
+                    "conversions": True,
+                }
+            }
+        )
+
+        parent = FastMCP("Test Parent")
+        initialize_and_mount_tools(parent)
+
+        tools = await parent.list_tools()
+        tool_names = [t.name for t in tools]
+
+        self.assertIn("conversions_upload_click_conversions", tool_names)
 
     @patch("ads_mcp.config.ToolsConfig.load")
     async def test_mounting_disabled_namespaces(self, mock_load):

@@ -28,10 +28,17 @@ DEFAULT_CONFIG_FILE = "tools_config.yaml"
 CONFIG_PATH_ENV_VAR = "GOOGLE_ADS_MCP_TOOLS_CONFIG"
 
 # Tool categories that are safe to expose when no configuration can be loaded.
-DEFAULT_CATEGORIES = ["customers", "search", "metadata"]
+DEFAULT_CATEGORIES = [
+    "customers",
+    "search",
+    "metadata",
+    "planning",
+    "reports",
+    "recommendations",
+]
 
 # All categories that are supported by the server.
-ALL_CATEGORIES = [*DEFAULT_CATEGORIES, "mutations"]
+ALL_CATEGORIES = [*DEFAULT_CATEGORIES, "conversions", "mutations"]
 
 
 class ToolsConfig:

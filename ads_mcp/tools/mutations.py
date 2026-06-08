@@ -46,6 +46,9 @@ import ads_mcp.utils as utils
 mutations_mcp = FastMCP("mutations")
 
 _ENABLE_MUTATIONS_ENV_VAR = "GOOGLE_ADS_MCP_ENABLE_MUTATIONS"
+_ALLOW_ENABLE_ENV_VAR = "GOOGLE_ADS_MCP_ALLOW_ENABLE"
+_MAX_DAILY_BUDGET_MICROS_ENV_VAR = "GOOGLE_ADS_MCP_MAX_DAILY_BUDGET_MICROS"
+_MAX_CPC_BID_MICROS_ENV_VAR = "GOOGLE_ADS_MCP_MAX_CPC_BID_MICROS"
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 AdGroupAdStatus = Literal["ENABLED", "PAUSED"]
@@ -69,6 +72,51 @@ def _require_real_mutation_enabled(validate_only: bool) -> None:
             f"Real Google Ads mutations are disabled. Set "
             f"{_ENABLE_MUTATIONS_ENV_VAR}=true and call the tool with "
             "validate_only=false after reviewing the proposed change."
+        )
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").lower() in _TRUE_VALUES
+
+
+def _get_optional_int_env(name: str) -> int | None:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = int(value)
+    except ValueError as ex:
+        raise ToolError(f"{name} must be an integer.") from ex
+    if parsed <= 0:
+        raise ToolError(f"{name} must be greater than zero.")
+    return parsed
+
+
+def _validate_budget_guardrail(amount_micros: int) -> None:
+    max_budget_micros = _get_optional_int_env(_MAX_DAILY_BUDGET_MICROS_ENV_VAR)
+    if max_budget_micros is not None and amount_micros > max_budget_micros:
+        raise ToolError(
+            f"Budget {amount_micros} exceeds "
+            f"{_MAX_DAILY_BUDGET_MICROS_ENV_VAR}={max_budget_micros}."
+        )
+
+
+def _validate_cpc_bid_guardrail(cpc_bid_micros: int) -> None:
+    max_cpc_bid_micros = _get_optional_int_env(_MAX_CPC_BID_MICROS_ENV_VAR)
+    if max_cpc_bid_micros is not None and cpc_bid_micros > max_cpc_bid_micros:
+        raise ToolError(
+            f"CPC bid {cpc_bid_micros} exceeds "
+            f"{_MAX_CPC_BID_MICROS_ENV_VAR}={max_cpc_bid_micros}."
+        )
+
+
+def _require_enable_allowed(status: str, validate_only: bool) -> None:
+    if validate_only or status != "ENABLED":
+        return
+    if not _env_enabled(_ALLOW_ENABLE_ENV_VAR):
+        raise ToolError(
+            f"Real ENABLED status changes are disabled. Set "
+            f"{_ALLOW_ENABLE_ENV_VAR}=true after launch approval."
         )
 
 
@@ -167,6 +215,7 @@ def create_campaign_budget(
     _require_real_mutation_enabled(validate_only)
     cleaned_name = _validate_non_empty(name, "name")
     cleaned_amount_micros = _validate_positive_micros(amount_micros, "amount_micros")
+    _validate_budget_guardrail(cleaned_amount_micros)
 
     budget_service = utils.get_googleads_service("CampaignBudgetService")
     operation = campaign_budget_service_types.CampaignBudgetOperation()
@@ -285,6 +334,8 @@ def create_ad_group(
         if cpc_bid_micros is not None
         else None
     )
+    if cleaned_cpc_bid_micros is not None:
+        _validate_cpc_bid_guardrail(cleaned_cpc_bid_micros)
 
     ad_group_service = utils.get_googleads_service("AdGroupService")
     operation = ad_group_service_types.AdGroupOperation()
@@ -336,6 +387,7 @@ def add_ad_group_keywords(
     """
 
     _require_real_mutation_enabled(validate_only)
+    _require_enable_allowed(status, validate_only)
     cleaned_ad_group_id = _validate_non_empty(ad_group_id, "ad_group_id")
     cleaned_keywords = _validate_keywords(keywords)
 
@@ -403,6 +455,7 @@ def create_responsive_search_ad(
     """
 
     _require_real_mutation_enabled(validate_only)
+    _require_enable_allowed(status, validate_only)
     cleaned_ad_group_id = _validate_non_empty(ad_group_id, "ad_group_id")
 
     cleaned_final_urls = [
@@ -481,6 +534,7 @@ def set_campaign_status(
     """
 
     _require_real_mutation_enabled(validate_only)
+    _require_enable_allowed(status, validate_only)
     cleaned_campaign_id = _validate_non_empty(campaign_id, "campaign_id")
 
     campaign_service = utils.get_googleads_service("CampaignService")
@@ -526,6 +580,7 @@ def set_ad_group_status(
     """
 
     _require_real_mutation_enabled(validate_only)
+    _require_enable_allowed(status, validate_only)
     cleaned_ad_group_id = _validate_non_empty(ad_group_id, "ad_group_id")
 
     ad_group_service = utils.get_googleads_service("AdGroupService")
@@ -575,6 +630,7 @@ def set_campaign_budget_amount(
         campaign_budget_id, "campaign_budget_id"
     )
     cleaned_amount_micros = _validate_positive_micros(amount_micros, "amount_micros")
+    _validate_budget_guardrail(cleaned_amount_micros)
 
     budget_service = utils.get_googleads_service("CampaignBudgetService")
     operation = campaign_budget_service_types.CampaignBudgetOperation()
@@ -647,5 +703,173 @@ def add_campaign_negative_keywords(
         "mutate_campaign_criteria",
         customer_id,
         operations,
+        validate_only,
+    )
+
+
+@mutations_mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+def get_mutation_guardrails() -> Dict[str, Any]:
+    """Returns the local mutation guardrails configured for this MCP server."""
+
+    return {
+        "real_mutations_enabled": _env_enabled(_ENABLE_MUTATIONS_ENV_VAR),
+        "enabled_status_changes_allowed": _env_enabled(_ALLOW_ENABLE_ENV_VAR),
+        "max_daily_budget_micros": _get_optional_int_env(
+            _MAX_DAILY_BUDGET_MICROS_ENV_VAR
+        ),
+        "max_cpc_bid_micros": _get_optional_int_env(_MAX_CPC_BID_MICROS_ENV_VAR),
+    }
+
+
+@mutations_mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=True,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
+)
+def set_ad_group_ad_status(
+    customer_id: str,
+    ad_group_id: str,
+    ad_id: str,
+    status: AdGroupAdStatus,
+    validate_only: bool = True,
+) -> Dict[str, Any]:
+    """Sets an ad group ad to ENABLED or PAUSED.
+
+    Args:
+        customer_id: The Google Ads customer ID without punctuation.
+        ad_group_id: Numeric ad group ID.
+        ad_id: Numeric ad ID.
+        status: ENABLED or PAUSED.
+        validate_only: Whether Google Ads should validate without applying the mutation.
+    """
+
+    _require_real_mutation_enabled(validate_only)
+    _require_enable_allowed(status, validate_only)
+    cleaned_ad_group_id = _validate_non_empty(ad_group_id, "ad_group_id")
+    cleaned_ad_id = _validate_non_empty(ad_id, "ad_id")
+
+    ad_group_ad_service = utils.get_googleads_service("AdGroupAdService")
+    operation = ad_group_ad_service_types.AdGroupAdOperation()
+    ad_group_ad = operation.update
+    ad_group_ad.resource_name = ad_group_ad_service.ad_group_ad_path(
+        _clean_customer_id(customer_id),
+        cleaned_ad_group_id,
+        cleaned_ad_id,
+    )
+    ad_group_ad.status = getattr(
+        ad_group_ad_status.AdGroupAdStatusEnum.AdGroupAdStatus, status
+    )
+    operation.update_mask.paths.append("status")
+
+    return _execute_mutate(
+        ad_group_ad_service,
+        "mutate_ad_group_ads",
+        customer_id,
+        [operation],
+        validate_only,
+    )
+
+
+@mutations_mcp.tool(
+    annotations=ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    )
+)
+def update_responsive_search_ad(
+    customer_id: str,
+    ad_group_id: str,
+    ad_id: str,
+    final_urls: List[str] | None = None,
+    headlines: List[str] | None = None,
+    descriptions: List[str] | None = None,
+    path1: str | None = None,
+    path2: str | None = None,
+    validate_only: bool = True,
+) -> Dict[str, Any]:
+    """Updates responsive search ad copy fields.
+
+    Args:
+        customer_id: The Google Ads customer ID without punctuation.
+        ad_group_id: Numeric ad group ID.
+        ad_id: Numeric ad ID.
+        final_urls: Optional replacement final URLs.
+        headlines: Optional replacement headlines, minimum 3 and maximum 15.
+        descriptions: Optional replacement descriptions, minimum 2 and maximum 4.
+        path1: Optional replacement first display URL path.
+        path2: Optional replacement second display URL path.
+        validate_only: Whether Google Ads should validate without applying the mutation.
+    """
+
+    _require_real_mutation_enabled(validate_only)
+    cleaned_ad_group_id = _validate_non_empty(ad_group_id, "ad_group_id")
+    cleaned_ad_id = _validate_non_empty(ad_id, "ad_id")
+    has_update = any(
+        value is not None
+        for value in [final_urls, headlines, descriptions, path1, path2]
+    )
+    if not has_update:
+        raise ToolError("Provide at least one ad field to update.")
+
+    ad_group_ad_service = utils.get_googleads_service("AdGroupAdService")
+    operation = ad_group_ad_service_types.AdGroupAdOperation()
+    ad_group_ad = operation.update
+    ad_group_ad.resource_name = ad_group_ad_service.ad_group_ad_path(
+        _clean_customer_id(customer_id),
+        cleaned_ad_group_id,
+        cleaned_ad_id,
+    )
+
+    if final_urls is not None:
+        cleaned_final_urls = [
+            final_url.strip() for final_url in final_urls if final_url.strip()
+        ]
+        if not cleaned_final_urls:
+            raise ToolError("final_urls must include at least one non-empty URL.")
+        ad_group_ad.ad.final_urls.extend(cleaned_final_urls)
+        operation.update_mask.paths.append("ad.final_urls")
+
+    if headlines is not None:
+        cleaned_headlines = [
+            headline.strip() for headline in headlines if headline.strip()
+        ]
+        if len(cleaned_headlines) < 3 or len(cleaned_headlines) > 15:
+            raise ToolError("Responsive search ads require 3 to 15 headlines.")
+        for headline in cleaned_headlines:
+            asset = ad_asset.AdTextAsset()
+            asset.text = headline
+            ad_group_ad.ad.responsive_search_ad.headlines.append(asset)
+        operation.update_mask.paths.append("ad.responsive_search_ad.headlines")
+
+    if descriptions is not None:
+        cleaned_descriptions = [
+            description.strip() for description in descriptions if description.strip()
+        ]
+        if len(cleaned_descriptions) < 2 or len(cleaned_descriptions) > 4:
+            raise ToolError("Responsive search ads require 2 to 4 descriptions.")
+        for description in cleaned_descriptions:
+            asset = ad_asset.AdTextAsset()
+            asset.text = description
+            ad_group_ad.ad.responsive_search_ad.descriptions.append(asset)
+        operation.update_mask.paths.append("ad.responsive_search_ad.descriptions")
+
+    if path1 is not None:
+        ad_group_ad.ad.responsive_search_ad.path1 = path1.strip()
+        operation.update_mask.paths.append("ad.responsive_search_ad.path1")
+
+    if path2 is not None:
+        ad_group_ad.ad.responsive_search_ad.path2 = path2.strip()
+        operation.update_mask.paths.append("ad.responsive_search_ad.path2")
+
+    return _execute_mutate(
+        ad_group_ad_service,
+        "mutate_ad_group_ads",
+        customer_id,
+        [operation],
         validate_only,
     )
