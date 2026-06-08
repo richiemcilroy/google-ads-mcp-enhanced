@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class MCPHeaderInterceptor(
     grpc.UnaryUnaryClientInterceptor, grpc.UnaryStreamClientInterceptor
 ):
-    """A custom metadata interceptor to add the 'google-ads-mcp' header."""
+    """A custom metadata interceptor to add the MCP package header."""
 
     _API_CLIENT_HEADER = "x-goog-api-client"
 
@@ -34,12 +34,12 @@ class MCPHeaderInterceptor(
         Falls back to 'unknown' if the version can't be resolved.
         """
         try:
-            return metadata.version("google-ads-mcp")
+            return metadata.version("google-ads-mcp-enhanced")
         except Exception:
             return "unknown"
 
     _MCP_EXTRA_HEADER = (
-        f" google-ads-mcp/{_get_package_version_with_fallback()}"
+        f" google-ads-mcp-enhanced/{_get_package_version_with_fallback()}"
     )
 
     def _mcp_intercept(self, continuation, client_call_details, request):
@@ -66,8 +66,8 @@ class MCPHeaderInterceptor(
                 if metadatum[0] == self._API_CLIENT_HEADER:
                     # Convert the tuple to a list so it can be modified.
                     val = list(metadatum)
-                    # Check that "google-ads-mcp" isn't already included in the user agent.
-                    if "google-ads-mcp" not in val[1]:
+                    # Check that the MCP package isn't already included in the user agent.
+                    if "google-ads-mcp-enhanced" not in val[1]:
                         # Append the protobuf version key value pair to the end of
                         # the string.
                         val[1] += self._MCP_EXTRA_HEADER
@@ -78,17 +78,13 @@ class MCPHeaderInterceptor(
                         # Exit the loop since we already found the user agent.
                         break
 
-            new_client_call_details = client_call_details._replace(
-                metadata=metadata
-            )
+            new_client_call_details = client_call_details._replace(metadata=metadata)
             return continuation(new_client_call_details, request)
         except Exception:
             logger.error("Error in MCPHeaderInterceptor", exc_info=True)
             return continuation(client_call_details, request)
 
-    def intercept_unary_stream(
-        self, continuation, client_call_details, request
-    ):
+    def intercept_unary_stream(self, continuation, client_call_details, request):
         return self._mcp_intercept(continuation, client_call_details, request)
 
     def intercept_unary_unary(self, continuation, client_call_details, request):

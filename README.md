@@ -1,6 +1,6 @@
-# Google Ads MCP Server
+# Google Ads MCP Enhanced
 
-This repo contains the source code for running an
+This repo contains the source code for running an enhanced
 [MCP](https://modelcontextprotocol.io) server that interacts with the
 [Google Ads API](https://developers.google.com/google-ads/api).
 
@@ -130,7 +130,7 @@ namespaces:
 ## Notes
 
 1.  The MCP Server will expose your data to the Agent or LLM that you connect to it.
-1.  If you have technical issues, please use the [GitHub issue tracker](https://github.com/googleads/google-ads-mcp/issues).
+1.  If you have technical issues, please use the [GitHub issue tracker](https://github.com/richiemcilroy/google-ads-mcp-enhanced/issues).
 1.  To help us collect usage data, you will notice an extra header has been added to your API calls: this data is used to improve the product.
 
 ## Setup instructions
@@ -176,7 +176,7 @@ To enable it, set the following environment variables:
 - `GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET`: Your Google Cloud OAuth 2.0 Client Secret.
 - `GOOGLE_ADS_MCP_BASE_URL`: (Optional) The base URL where the server is accessible (defaults to `http://localhost:8080`).
 
-Once this is enabled, you can authenticate to the API through your MCP client: for example, in Gemini CLI, the command `/mcp auth google-ads-mcp` triggers the authentication flow.
+Once this is enabled, you can authenticate to the API through your MCP client: for example, in Gemini CLI, the command `/mcp auth google-ads-mcp-enhanced` triggers the authentication flow.
 
 When these variables are set, the server automatically switches to the `streamable-http` transport (SSE/HTTP) instead of `stdio`.
 
@@ -259,7 +259,7 @@ popular clients.
     ```json
     {
       "mcpServers": {
-        "google-ads-mcp": {
+        "google-ads-mcp-enhanced": {
           "httpUrl":"http://localhost:8080/mcp",
           "env": {
             "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID",
@@ -285,13 +285,13 @@ popular clients.
     ```json
     {
       "mcpServers": {
-        "google-ads-mcp": {
+        "google-ads-mcp-enhanced": {
           "command": "pipx",
           "args": [
             "run",
             "--spec",
-            "git+https://github.com/googleads/google-ads-mcp.git",
-            "google-ads-mcp"
+            "git+https://github.com/richiemcilroy/google-ads-mcp-enhanced.git",
+            "google-ads-mcp-enhanced"
           ],
           "env": {
             "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
@@ -308,13 +308,13 @@ popular clients.
     ```json
     {
       "mcpServers": {
-        "google-ads-mcp": {
+        "google-ads-mcp-enhanced": {
           "command": "pipx",
           "args": [
             "run",
             "--spec",
-            "git+https://github.com/googleads/google-ads-mcp.git",
-            "google-ads-mcp"
+            "git+https://github.com/richiemcilroy/google-ads-mcp-enhanced.git",
+            "google-ads-mcp-enhanced"
           ],
           "env": {
             "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID",
@@ -337,13 +337,13 @@ The final file will look like this:
   ```json
   {
     "mcpServers": {
-      "google-ads-mcp": {
+      "google-ads-mcp-enhanced": {
         "command": "pipx",
         "args": [
           "run",
           "--spec",
-          "git+https://github.com/googleads/google-ads-mcp.git",
-          "google-ads-mcp"
+          "git+https://github.com/richiemcilroy/google-ads-mcp-enhanced.git",
+          "google-ads-mcp-enhanced"
         ],
         "env": {
           "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
@@ -384,7 +384,7 @@ You can use Cloud Build to build and push the image to Artifact Registry without
     ```
 2.  Build and submit the image:
     ```shell
-    gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp:latest .
+    gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp-enhanced:latest .
     ```
     Replace `YOUR_PROJECT_ID` with your Google Cloud project ID.
 
@@ -400,8 +400,8 @@ Make sure to set the required environment variables:
 - `FASTMCP_HOST`: Set this to `0.0.0.0` to allow FastMCP to accept connections from all IP addresses.
 
 ```shell
-gcloud run deploy google-ads-mcp \
-  --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp:latest \
+gcloud run deploy google-ads-mcp-enhanced \
+  --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp-enhanced:latest \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
@@ -415,7 +415,7 @@ Once deployed, update your MCP client configuration (e.g., `~/.gemini/settings.j
 ```json
 {
   "mcpServers": {
-    "google-ads-mcp": {
+    "google-ads-mcp-enhanced": {
       "httpUrl": "https://your-cloud-run-url.a.run.app/mcp"
     }
   }
@@ -424,7 +424,7 @@ Once deployed, update your MCP client configuration (e.g., `~/.gemini/settings.j
 
 ## Try it out
 
-Launch your MCP client. You should see `google-ads-mcp` listed in the
+Launch your MCP client. You should see `google-ads-mcp-enhanced` listed in the
 available servers.
 
 Here are some sample prompts to get you started:

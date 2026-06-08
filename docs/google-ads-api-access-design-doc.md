@@ -4,7 +4,7 @@
 
 Cap is applying for Google Ads API Basic Access for an internal advertising operations tool used only to manage Cap's own Google Ads account.
 
-The tool is a locally hosted Model Context Protocol (MCP) server based on Google's open source `google-ads-mcp` project, extended with guarded tools for campaign planning, reporting, recommendations, conversion upload, and campaign/ad management. It is not a third-party SaaS product and is not offered to external advertisers.
+The tool is a locally hosted Model Context Protocol (MCP) server named `google-ads-mcp-enhanced`. It is based on Google's open source `google-ads-mcp` project and extended with guarded tools for campaign planning, reporting, recommendations, conversion upload, and campaign/ad management. It is not a third-party SaaS product and is not offered to external advertisers.
 
 Requested access level: Basic Access.
 

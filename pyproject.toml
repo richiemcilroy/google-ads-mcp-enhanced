@@ -1,5 +1,5 @@
 [project]
-name = "google-ads-mcp"
+name = "google-ads-mcp-enhanced"
 version = "0.0.1"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ dependencies = [
     "fastmcp>=3.2.0"
 ]
 
-description = "MCP Server for Google Ads, depends on Google Ads API."
+description = "Enhanced MCP server for Google Ads with planning, reporting, conversion, and guarded mutation tools."
 readme = "README.md"
 authors = [{ name = "Dean Lukies", email = "lukiesd@users.noreply.github.com" }]
 keywords = ["Google Ads", "Google Ads API", "MCP"]
@@ -26,10 +26,10 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/googleads/google-ads-mcp"
-repository = "https://github.com/googleads/google-ads-mcp.git"
-issues = "https://github.com/googleads/google-ads-mcp/issues"
+homepage = "https://github.com/richiemcilroy/google-ads-mcp-enhanced"
+repository = "https://github.com/richiemcilroy/google-ads-mcp-enhanced.git"
+issues = "https://github.com/richiemcilroy/google-ads-mcp-enhanced/issues"
 
 [project.scripts]
-google-ads-mcp = "ads_mcp.server:run_server"
-google-ads-mcp-update-gaql = "ads_mcp.update_references:update_gaql_resource_file"
+google-ads-mcp-enhanced = "ads_mcp.server:run_server"
+google-ads-mcp-enhanced-update-gaql = "ads_mcp.update_references:update_gaql_resource_file"
