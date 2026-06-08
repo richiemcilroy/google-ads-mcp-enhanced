@@ -34,6 +34,7 @@ class TestToolsMounting(unittest.IsolatedAsyncioTestCase):
                     "customers": True,
                     "search": True,
                     "metadata": True,
+                    "mutations": False,
                 }
             }
         )
@@ -48,6 +49,34 @@ class TestToolsMounting(unittest.IsolatedAsyncioTestCase):
         self.assertIn("customers_list_accessible_customers", tool_names)
         self.assertIn("search_search", tool_names)
         self.assertIn("metadata_get_resource_metadata", tool_names)
+        self.assertNotIn("mutations_set_campaign_status", tool_names)
+
+    @patch("ads_mcp.config.ToolsConfig.load")
+    async def test_mounting_explicit_mutations_namespace(self, mock_load):
+        """Tests that mutation tools mount only when explicitly enabled."""
+        mock_load.return_value = ToolsConfig(
+            {
+                "namespaces": {
+                    "mutations": True,
+                }
+            }
+        )
+
+        parent = FastMCP("Test Parent")
+        initialize_and_mount_tools(parent)
+
+        tools = await parent.list_tools()
+        tool_names = [t.name for t in tools]
+
+        self.assertIn("mutations_create_campaign_budget", tool_names)
+        self.assertIn("mutations_create_paused_search_campaign", tool_names)
+        self.assertIn("mutations_create_ad_group", tool_names)
+        self.assertIn("mutations_add_ad_group_keywords", tool_names)
+        self.assertIn("mutations_create_responsive_search_ad", tool_names)
+        self.assertIn("mutations_set_campaign_status", tool_names)
+        self.assertIn("mutations_set_ad_group_status", tool_names)
+        self.assertIn("mutations_set_campaign_budget_amount", tool_names)
+        self.assertIn("mutations_add_campaign_negative_keywords", tool_names)
 
     @patch("ads_mcp.config.ToolsConfig.load")
     async def test_mounting_disabled_namespaces(self, mock_load):

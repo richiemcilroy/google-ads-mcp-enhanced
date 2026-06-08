@@ -27,8 +27,11 @@ DEFAULT_CONFIG_FILE = "tools_config.yaml"
 # Environment variable used to point the server at an explicit config file.
 CONFIG_PATH_ENV_VAR = "GOOGLE_ADS_MCP_TOOLS_CONFIG"
 
-# Default categories that are supported by the server
-ALL_CATEGORIES = ["customers", "search", "metadata"]
+# Tool categories that are safe to expose when no configuration can be loaded.
+DEFAULT_CATEGORIES = ["customers", "search", "metadata"]
+
+# All categories that are supported by the server.
+ALL_CATEGORIES = [*DEFAULT_CATEGORIES, "mutations"]
 
 
 class ToolsConfig:
@@ -65,9 +68,7 @@ class ToolsConfig:
 
         # 4: fall back to the default config bundled with the package so that
         # installed deployments (e.g. ``pipx run``) work without extra setup.
-        bundled = importlib.resources.files("ads_mcp").joinpath(
-            DEFAULT_CONFIG_FILE
-        )
+        bundled = importlib.resources.files("ads_mcp").joinpath(DEFAULT_CONFIG_FILE)
         if bundled.is_file():
             logger.info(
                 "No local '%s' found; using the bundled default configuration.",
@@ -91,7 +92,7 @@ class ToolsConfig:
             logger.warning(
                 "No tools configuration file found; enabling all default tool "
                 "namespaces (%s).",
-                ", ".join(ALL_CATEGORIES),
+                ", ".join(DEFAULT_CATEGORIES),
             )
             return cls()
 
@@ -113,7 +114,7 @@ class ToolsConfig:
         namespaces = self._config.get("namespaces", {})
         if not namespaces:
             # By default, if no config is specified, all known categories are enabled
-            return category in ALL_CATEGORIES
+            return category in DEFAULT_CATEGORIES
 
         category_config = namespaces.get(category)
         if category_config is None:

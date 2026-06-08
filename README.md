@@ -17,6 +17,38 @@ to provide several
 - `get_resource_metadata`: Retrieves metadata about a Google Ads API resource type, for example "campaign". This is useful to understand the structure of the data and what fields are available for querying.
 - `list_accessible_customers`: Returns ids of customers directly accessible
   by the user authenticating the call.
+- Mutation tools are available under the `mutations` namespace when explicitly
+  enabled. They can create budgets, paused Search campaigns, ad groups,
+  keywords, responsive search ads, campaign negative keywords, and update
+  campaign/ad group status or campaign budget amount.
+
+### Mutation guardrails
+
+Mutation tools are disabled in the bundled `tools_config.yaml` and every tool
+defaults to `validate_only=true`, which asks Google Ads to validate the request
+without applying it.
+
+To expose mutation tools, use a custom tools config:
+
+```yaml
+namespaces:
+  customers: true
+  search: true
+  metadata: true
+  mutations: true
+```
+
+To apply a real mutation instead of a validation-only request, the server
+environment must also include:
+
+```shell
+GOOGLE_ADS_MCP_ENABLE_MUTATIONS=true
+```
+
+Keep real writes behind human review in your MCP client. A recommended workflow
+is to call mutation tools with `validate_only=true`, inspect the result and
+planned operation, then call the same tool with `validate_only=false` only after
+approval.
 
 ### Configuring and Namespacing Tools
 
