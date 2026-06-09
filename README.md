@@ -11,6 +11,9 @@ The server uses the
 to provide several
 [Tools](https://modelcontextprotocol.io/docs/concepts/tools) and [Resources](https://modelcontextprotocol.io/docs/concepts/tools) for use with LLMs and AI agents.
 
+For Cap's local Codex setup, account context, access checks, and write
+guardrails, see [docs/cap-google-ads-mcp-context.md](docs/cap-google-ads-mcp-context.md).
+
 ### Tools available
 
 - `search`: Retrieves information about the Google Ads account.
